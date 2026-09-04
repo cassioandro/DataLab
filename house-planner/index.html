@@ -338,7 +338,6 @@ function build(p){
   if(kk){
     { const cells=hasUp?[[depo,0.8],[wcR,0.7]]:[[wcR,0.7]];                                                   // KK batı duvarı: hücre kapıları
       wall('A-WALL-INT','v',kk.x-ti,yS0,sD,ti,cells.filter(c=>c[0]).map((c,i)=>({at:(c[0].y-yS0)+0.3,w:c[1],kind:'door',swing:-1,hinge:i?'a':'b'}))); }
-    wall('A-WALL-INT','h',kk.x,clo.y-ti,kk.w,ti);                                                             // dolap arkası
     if(hasUp){
       wall('A-WALL-INT','v',kk.x+kk.w,laundry.y-ti,Ds-wcD,ti,[{at:ti+0.3,w:0.8,kind:'door',swing:+1,hinge:'a'}]);   // çamaşır kapısı (KK'dan)
       wall('A-WALL-INT','h',xw0,yS0+wcD,cellW,ti); wall('A-WALL-INT','h',vest.x,yS0+wcD,vest.w,ti);
