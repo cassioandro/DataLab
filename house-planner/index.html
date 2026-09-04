@@ -232,14 +232,15 @@ function layout(p){
     x:stepSide==='W'?xw0:xe0,w:stepSide==='W'?xw1-xw0:xe1-xe0,y:yM0-ti-stepD,h:stepD}:null;
   const corridor={id:'COR',name:'Koridor',zone:'circ',x:xc0,y:yE1+ti,w:c,h:yM0-ti-(yE1+ti)};
   /* --- ebeveyn: yatak alanı | giyinme (duvarsız) | en-suite (ince uzun), hepsi tam derinlik --- */
-  const wEns=1.8, wDrs=2.0;
-  const xEns=p.ens?x1-wEns:x1, xDrs=p.ens?xEns-ti-wDrs:x1;
+  const wEns=1.8;
+  const xEns=p.ens?x1-wEns:x1;
+  const xDrs=p.ens?Math.min(xe0,xEns-ti-1.4):x1, wDrs=xEns-ti-xDrs;                                // ebeveyn | giyinme duvarı koridorun doğu yüzüne hizalı
   const master={id:'BR1',name:p.beds===1?'Yatak Odası':'Ebeveyn Y.O.',zone:'night',kind:'master',x:x0,y:yM0,w:(p.ens?xDrs-ti:x1)-x0,h:Dm,step:step};
   const stackRooms=s=>s.rooms.flatMap(r=>r.kind==='suite2'?[r.ens,r.clo]:(r.hidden||r.kind==='kitchen'||r.kind==='bath')?[]:[r]);
   rooms.push(corridor,...stackRooms(st.W),...stackRooms(st.E),master); if(step) rooms.push(step);
   let dress=null, ens=null;
   if(p.ens){
-    dress={id:'DRS',name:'Giyinme',zone:'night',kind:'dress',x:xDrs,y:yM0,w:wDrs,h:Dm};
+    dress={id:'DRS',name:'Giyinme',zone:'night',kind:'dress',x:xDrs,y:yM0,w:r2(wDrs),h:Dm};
     ens={id:'ENS',name:'Eb. Banyo',zone:'wet',kind:'ensuite',x:xEns,y:yM0,w:wEns,h:Dm};
     rooms.push(dress,ens);
   }
@@ -250,6 +251,7 @@ function layout(p){
   if(wSide>4.6) warnings.push(`Yan odalar gereksiz geniş (${r2(wSide)} m). Bina genişliğini azaltın.`);
   if(p.Dl<5.2) warnings.push('10 kişilik masa için salon derinliği en az 5.2 m olmalı.');
   if(master.w<4.6) warnings.push(`Ebeveyn yatak alanı dar (${r2(master.w)} m). Bina genişliğini artırın.`);
+  if(p.ens&&xDrs<xe0-0.01) warnings.push('Giyinme duvarı koridora hizalanamadı (giyinme 1.4 m altına düşerdi); bina genişliğini artırın.');
   if(vest&&vest.w<0.9) warnings.push('Vestiyer çok dar; bina genişliğini artırın.');
   if(kitchen.w<3.8||p.Dk<3.4) warnings.push(`Ada için mutfak en az 3.8 × 3.4 m olmalı (${r2(kitchen.w)} m); ada çizilmedi.`);
   if(D/W>2.6) warnings.push(`Plan çok uzun (${r2(D)} m). Genişliği artırmak koridoru kısaltır.`);
