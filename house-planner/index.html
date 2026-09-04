@@ -117,11 +117,11 @@ main{padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
 /* ---------- Katmanlar (AutoCAD ACI renk indeksleriyle eşleşir) ---------- */
 const LAYERS = [
   {id:'A-AREA',     name:'Mahal dolgu', color:'#9aa4a0', aci:9, lw:0.09},
+  {id:'A-FURN',     name:'Tefriş',      color:'#1e8f3c', aci:3, lw:0.13},
   {id:'A-WALL-EXT', name:'Dış duvar',   color:'#1b1b1b', aci:7, lw:0.35},
   {id:'A-WALL-INT', name:'İç duvar',    color:'#4a4a4a', aci:8, lw:0.25},
   {id:'A-DOOR',     name:'Kapı',        color:'#d11a1a', aci:1, lw:0.18},
   {id:'A-GLAZ',     name:'Pencere',     color:'#0a9cb3', aci:4, lw:0.18},
-  {id:'A-FURN',     name:'Tefriş',      color:'#1e8f3c', aci:3, lw:0.13},
   {id:'A-ANNO',     name:'Mahal yazısı',color:'#1a3fbf', aci:5, lw:0.13},
   {id:'A-DIMS',     name:'Ölçü',        color:'#b81aa8', aci:6, lw:0.13},
 ];
@@ -218,11 +218,11 @@ function layout(p){
 function build(p){
   const L=layout(p); const {W,te,ti,c}=p; const {D,pd}=L; const cellW=1.5, wcD=1.7;
   const P=[];
-  const rect=(l,x,y,w,h,fill,extra)=>P.push(Object.assign({k:'rect',l,x,y,w,h,fill:!!fill},extra||{}));
+  const rect=(l,x,y,w,h,fill,extra)=>P.push(Object.assign({k:'rect',l,x,y,w,h,fill:!!fill,white:l==='A-FURN'&&!fill},extra||{}));   // tefriş: beyaz dolgu
   const line=(l,x1,y1,x2,y2,extra)=>P.push(Object.assign({k:'line',l,x1,y1,x2,y2},extra||{}));
   const dash=(l,x1,y1,x2,y2)=>line(l,x1,y1,x2,y2,{dash:true});
   const arc=(l,cx,cy,r,a0,a1)=>P.push({k:'arc',l,cx,cy,r,a0,a1});
-  const circle=(l,cx,cy,r)=>P.push({k:'circle',l,cx,cy,r});
+  const circle=(l,cx,cy,r)=>P.push({k:'circle',l,cx,cy,r,white:l==='A-FURN'});
   const text=(l,x,y,s,t,anchor,rot)=>P.push({k:'text',l,x,y,s,t,anchor:anchor||'middle',rot:rot||0});
 
   const walls=[];
@@ -499,9 +499,9 @@ function toSVG(model, opts){
     let g=`<g id="${Ld.id}" data-name="${esc(Ld.name)}" stroke="${Ld.color}" fill="none" stroke-width="${sw}" stroke-linecap="square"${hidden?' display="none"':''}>`;
     items.forEach(q=>{
       switch(q.k){
-        case 'rect': g+=`<rect x="${q.x}" y="${Y(q.y+q.h)}" width="${q.w}" height="${q.h}"${q.fill?` fill="${Ld.color}" stroke="none"`:q.fillColor?` fill="${q.fillColor}" stroke="none"`:''}/>`; break;
+        case 'rect': g+=`<rect x="${q.x}" y="${Y(q.y+q.h)}" width="${q.w}" height="${q.h}"${q.fill?` fill="${Ld.color}" stroke="none"`:q.fillColor?` fill="${q.fillColor}" stroke="none"`:q.white?' fill="#ffffff"':''}/>`; break;
         case 'line': g+=`<line x1="${q.x1}" y1="${Y(q.y1)}" x2="${q.x2}" y2="${Y(q.y2)}"${q.dash?' stroke-dasharray="0.15 0.1"':''}/>`; break;
-        case 'circle': g+=`<circle cx="${q.cx}" cy="${Y(q.cy)}" r="${q.r}"/>`; break;
+        case 'circle': g+=`<circle cx="${q.cx}" cy="${Y(q.cy)}" r="${q.r}"${q.white?' fill="#ffffff"':''}/>`; break;
         case 'arc': { const a0=q.a0*Math.PI/180,a1=q.a1*Math.PI/180; const x1=q.cx+q.r*Math.cos(a0),y1=q.cy+q.r*Math.sin(a0),x2=q.cx+q.r*Math.cos(a1),y2=q.cy+q.r*Math.sin(a1);
           g+=`<path d="M${x1} ${Y(y1)} A${q.r} ${q.r} 0 0 0 ${x2} ${Y(y2)}"/>`; break; }
         case 'text': g+=`<text x="${q.x}" y="${Y(q.y)}" font-size="${q.s}" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" fill="${Ld.color}" stroke="none" text-anchor="${q.anchor}"${q.rot?` transform="rotate(${-q.rot} ${q.x} ${Y(q.y)})"`:''}>${esc(q.t)}</text>`; break;
@@ -554,9 +554,10 @@ function toPDF(model){
       switch(q.k){
         case 'rect': if(q.fill) doc.rect(X(q.x),Y(q.y+q.h),q.w*sc,q.h*sc,'F');
           else if(q.fillColor){ doc.setFillColor(...hex(q.fillColor)); doc.rect(X(q.x),Y(q.y+q.h),q.w*sc,q.h*sc,'F'); doc.setFillColor(...col); }
+          else if(q.white){ doc.setFillColor(255,255,255); doc.rect(X(q.x),Y(q.y+q.h),q.w*sc,q.h*sc,'FD'); doc.setFillColor(...col); }
           else doc.rect(X(q.x),Y(q.y+q.h),q.w*sc,q.h*sc,'S'); break;
         case 'line': if(q.dash) doc.setLineDashPattern([1.5,1],0); doc.line(X(q.x1),Y(q.y1),X(q.x2),Y(q.y2)); if(q.dash) doc.setLineDashPattern([],0); break;
-        case 'circle': doc.circle(X(q.cx),Y(q.cy),q.r*sc,'S'); break;
+        case 'circle': if(q.white){ doc.setFillColor(255,255,255); doc.circle(X(q.cx),Y(q.cy),q.r*sc,'FD'); doc.setFillColor(...col); } else doc.circle(X(q.cx),Y(q.cy),q.r*sc,'S'); break;
         case 'arc': { let a0=q.a0,a1=q.a1; if(a1<a0) a1+=360; const n=12; let px,py;
           for(let i=0;i<=n;i++){ const a=(a0+(a1-a0)*i/n)*Math.PI/180; const x=X(q.cx+q.r*Math.cos(a)), y=Y(q.cy+q.r*Math.sin(a)); if(i) doc.line(px,py,x,y); px=x;py=y; } break; }
         case 'text': doc.setFont('helvetica','normal'); doc.setFontSize(q.s*sc*2.835);
