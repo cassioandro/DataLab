@@ -316,7 +316,7 @@ function build(p){
   }
   if(bathW){
     if(laundry) wall('A-WALL-INT','h',xw0,yS0+wcD,cellW,ti);                                                  // WC | çamaşır
-    wall('A-WALL-INT','h',xw0,bath.y-ti,xw1-xw0,ti,[{at:(kk.x-xw0)+kk.w-0.15-0.8,w:0.8,kind:'door',swing:+1,hinge:'b'}]);   // lobi → banyo, kapı koridor ucunda
+    wall('A-WALL-INT','h',xw0,bath.y-ti,xw1-xw0,ti);                                                          // banyo | lobi: dolu duvar
   }
   // mutfak | hol: duvar, kapısı salona yakın (güney) uçta; kapalı mutfakta salona servis penceresi
   wall('A-WALL-INT','v',xc1,yE0,p.De,ti,[{at:0.15,w:0.9,kind:'door',swing:+1,hinge:'a'}]);
@@ -329,7 +329,9 @@ function build(p){
   // koridor duvarları
   const corE=wall('A-WALL-INT','v',xc1,yE1,yM0-ti-yE1,ti);
   const corW=wall('A-WALL-INT','v',xw1,yS0,yM0-ti-yS0,ti);
-  if(!bathW) corE.op.push({at:(bath.y-corE.y)+bath.d-0.15-0.8,w:0.8,kind:'door',swing:+1,hinge:'b'});   // banyo kapısı koridordan
+
+  if(!bathW) corE.op.push({at:(bath.y-corE.y)+bath.d-0.15-0.8,w:0.8,kind:'door',swing:+1,hinge:'b'});   // banyo kapısı koridordan (doğu duvarı)
+  else corW.op.push({at:(bath.y-corW.y)+ctr(0,bath.d,0.8),w:0.8,kind:'door',swing:-1,hinge:'a'});       // 2+1: banyo kapısı koridordan (batı duvarı)
   // ebeveyn güney duvarı: kapı koridor hizasında, menteşe doğuda
   wall('A-WALL-INT','h',x0,yM0-ti,x1-x0,ti,[{at:(xc0+(c-0.9)/2)-x0,w:0.9,kind:'door',swing:+1,hinge:'b'}]);
   [[st.W,corW,-1],[st.E,corE,+1]].forEach(([s,cw,sw])=>{
