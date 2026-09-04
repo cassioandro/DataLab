@@ -162,22 +162,27 @@ function layout(p){
   const living={id:'LIV',name:'Salon',zone:'day',x:x0,y:yL0,w:x1-x0,h:p.Dl};
   const hall={id:'ENT',name:'Giriş',zone:'circ',x:hallX,y:yE0,w:xc1-hallX,h:p.De};
   const kitchen={id:'KIT',name:p.kitchen==='open'?'Mutfak (açık)':'Mutfak',zone:'day',kind:'kitchen',side:'E',x:xe0,y:yE0,w:xe1-xe0,d:p.Dk};
-  const bath={id:'BTH',name:'Banyo',zone:'wet',kind:'bath',side:'E',x:xe0,y:yE0+p.Dk+ti,w:xe1-xe0,d:2.2};
-  /* --- batı servis hücresi: derinliği doğu yığınına (mutfak+banyo) eşitlenir --- */
-  const yS0=yE1+ti; const Ds=Math.max(2.0,(bath.y+bath.d)-yS0);
-  const kkW=1.1, wcD=1.7;
+  /* 2+1: banyo batı servis hücresine (KK ucunda), vestiyer/depo yok; doğu yığını mutfak + yatak odası.
+     Diğer tipler: banyo doğuda koridorun karşısında; batı hücresi derinliği doğu yığınına (mutfak+banyo) eşitlenir. */
+  const bathW=p.beds===2;
+  const yS0=yE1+ti; const kkW=1.1, wcD=1.7;
+  let bath, Ds;
+  if(bathW){ Ds=Math.max(4.6,(p.Dk+ti+p.Db)-p.De-ti); }
+  else { bath={id:'BTH',name:'Banyo',zone:'wet',kind:'bath',side:'E',x:xe0,y:yE0+p.Dk+ti,w:xe1-xe0,d:2.2}; Ds=Math.max(2.0,(bath.y+bath.d)-yS0); }
+  const hasUp=!bathW&&(Ds-wcD-ti>=1.3);
   // dizilim: güneybatı Depo | küçük koridor (KK, min 1.1) | güneydoğu Vestiyer (duvarsız niş); üst sıra: kuzeybatı Çamaşır (pencereli) | kuzeydoğu WC
-  const kk={id:'KK',name:'',zone:'circ',kind:'minihall',x:xw0+cellW+ti,y:yS0,w:kkW,h:Ds-0.6};    // küçük koridor, kuzey ucunda 0.6 dolap (duvarsız)
-  const clo={id:'DLP',name:'Dolap',zone:'circ',kind:'closet',x:kk.x,y:yS0+Ds-0.6,w:kkW,h:0.6};
-  const hasUp=(Ds-wcD-ti>=1.3);
-  const vest={id:'VST',name:'Vestiyer',zone:'circ',kind:'vest',x:kk.x+kkW,y:yS0,w:xw1-(kk.x+kkW),h:hasUp?wcD:Ds};
+  // 2+1: batı sütun WC + Çamaşır; doğu şerit (KK + vestiyer genişliği) lobi, kuzey ucunda banyo 2.2 derinlik
+  const kk={id:'KK',name:'',zone:'circ',kind:'minihall',x:xw0+cellW+ti,y:yS0,w:bathW?xw1-(xw0+cellW+ti):kkW,h:bathW?Ds-2.2-ti:Ds-0.6};
+  const clo=bathW?null:{id:'DLP',name:'Dolap',zone:'circ',kind:'closet',x:kk.x,y:yS0+Ds-0.6,w:kkW,h:0.6};
+  const vest=bathW?null:{id:'VST',name:'Vestiyer',zone:'circ',kind:'vest',x:kk.x+kkW,y:yS0,w:xw1-(kk.x+kkW),h:hasUp?wcD:Ds};
   const depo=hasUp?{id:'DPO',name:'Depo',zone:'circ',kind:'store2',x:xw0,y:yS0,w:cellW,h:wcD}:null;
-  const laundry=hasUp?{id:'CMS',name:'Çamaşır',zone:'wet',kind:'laundry',x:xw0,y:yS0+wcD+ti,w:cellW,h:Ds-wcD-ti}:null;
+  const laundry=(hasUp||bathW)?{id:'CMS',name:'Çamaşır',zone:'wet',kind:'laundry',x:xw0,y:yS0+wcD+ti,w:cellW,h:Ds-wcD-ti}:null;
   const wcR=hasUp?{id:'WC',name:'WC',zone:'wet',kind:'wc',x:vest.x,y:yS0+wcD+ti,w:vest.w,h:Ds-wcD-ti}
-                 :{id:'WC',name:'WC',zone:'wet',kind:'wc',x:xw0,y:yS0,w:cellW,h:Ds};
+                 :{id:'WC',name:'WC',zone:'wet',kind:'wc',x:xw0,y:yS0,w:cellW,h:bathW?wcD:Ds};
+  if(bathW) bath={id:'BTH',name:'Banyo',zone:'wet',kind:'bath',side:'W',x:kk.x,y:yS0+Ds-2.2,w:kk.w,d:2.2};
   const svc={id:'SVC',kind:'service',side:'W',x:xw0,y:yS0,w:wSide,d:Ds,hidden:true};
-  rooms.push(living,hall,kitchen,bath,vest,wcR,kk,clo); if(hasUp) rooms.push(laundry,depo);
-  const st={W:{rooms:[svc],len:(yS0+Ds)-yE0,x:xw0,w:wSide},E:{rooms:[kitchen,bath],len:(bath.y+bath.d)-yE0,x:xe0,w:xe1-xe0}};
+  rooms.push(living,hall,kitchen,bath,wcR,kk); if(vest) rooms.push(vest,clo); if(laundry) rooms.push(laundry); if(depo) rooms.push(depo);
+  const st={W:{rooms:[svc],len:(yS0+Ds)-yE0,x:xw0,w:wSide},E:{rooms:bathW?[kitchen]:[kitchen,bath],len:bathW?p.Dk:(bath.y+bath.d)-yE0,x:xe0,w:xe1-xe0}};
   const put=(side,it)=>{ const s=st[side]; it.side=side; it.x=s.x; it.w=s.w; it.y=yE0+s.len+ti; s.len=(it.y-yE0)+it.d; s.rooms.push(it); };
   const shorter=()=>st.W.len<=st.E.len?'W':'E';
   for(let i=2;i<=p.beds;i++) put(shorter(),{id:'BR'+i,name:'Yatak Odası '+i,zone:'night',kind:'bed',d:p.Db});
@@ -185,8 +190,16 @@ function layout(p){
   if(diff>0.01){
     const sh=shorter(), s=st[sh], last=s.rooms[s.rooms.length-1];
     if(diff<1.0){ last.d+=diff; s.len+=diff; }
-    else if(diff<2.0+ti) put(sh,{id:'STO',name:'Depo',zone:'circ',kind:'store',d:diff-ti});
-    else put(sh,{id:'STD',name:'Çalışma Odası',zone:'night',kind:'study',d:diff-ti});
+    else if(diff<2.0+ti||last.kind!=='bed') put(sh,{id:'STO',name:'Depo',zone:'circ',kind:'store',d:diff-ti});
+    else {
+      // ikinci süit: son oda 0.6'ya kadar büyür, kalan bant = en-suite (dış duvarda, pencereli) + giyinme (koridor tarafında)
+      const roomExtra=clamp(diff-ti-3.0,0,0.6); last.d+=roomExtra; s.len+=roomExtra;
+      const band={id:'SU2',kind:'suite2',d:diff-ti-roomExtra,hidden:true}; put(sh,band);
+      const we=Math.min(2.4,band.w-1.4), ext=sh==='E';
+      band.ens={id:'EN2',name:'Banyo 2',zone:'wet',kind:'ensuite2',x:ext?band.x+band.w-we:band.x,y:band.y,w:we,h:band.d,side:sh};
+      band.clo={id:'GY2',name:'Giyinme',zone:'night',kind:'closet2',x:ext?band.x:band.x+we+ti,y:band.y,w:band.w-we-ti,h:band.d,side:sh};
+      last.suite=band;
+    }
   }
   const Lc=Math.max(st.W.len,st.E.len);
   const yM0=yE0+Lc+ti, yM1=yM0+p.Dm, D=yM1+te;
@@ -195,7 +208,8 @@ function layout(p){
   const wEns=1.8, wDrs=2.0;
   const xEns=p.ens?x1-wEns:x1, xDrs=p.ens?xEns-ti-wDrs:x1;
   const master={id:'BR1',name:p.beds===1?'Yatak Odası':'Ebeveyn Y.O.',zone:'night',kind:'master',x:x0,y:yM0,w:(p.ens?xDrs-ti:x1)-x0,h:p.Dm};
-  rooms.push(corridor,...st.W.rooms.filter(r=>!r.hidden),...st.E.rooms.filter(r=>r.kind!=='kitchen'&&r.kind!=='bath'),master);
+  const stackRooms=s=>s.rooms.flatMap(r=>r.kind==='suite2'?[r.ens,r.clo]:(r.hidden||r.kind==='kitchen'||r.kind==='bath')?[]:[r]);
+  rooms.push(corridor,...stackRooms(st.W),...stackRooms(st.E),master);
   let dress=null, ens=null;
   if(p.ens){
     dress={id:'DRS',name:'Giyinme',zone:'night',kind:'dress',x:xDrs,y:yM0,w:wDrs,h:p.Dm};
@@ -208,10 +222,10 @@ function layout(p){
   if(wSide>4.6) warnings.push(`Yan odalar gereksiz geniş (${r2(wSide)} m). Bina genişliğini azaltın.`);
   if(p.Dl<5.2) warnings.push('10 kişilik masa için salon derinliği en az 5.2 m olmalı.');
   if(master.w<4.6) warnings.push(`Ebeveyn yatak alanı dar (${r2(master.w)} m). Bina genişliğini artırın.`);
-  if(vest.w<0.9) warnings.push('Vestiyer çok dar; bina genişliğini artırın.');
+  if(vest&&vest.w<0.9) warnings.push('Vestiyer çok dar; bina genişliğini artırın.');
   if(kitchen.w<3.8||p.Dk<3.4) warnings.push(`Ada için mutfak en az 3.8 × 3.4 m olmalı (${r2(kitchen.w)} m); ada çizilmedi.`);
   if(D/W>2.6) warnings.push(`Plan çok uzun (${r2(D)} m). Genişliği artırmak koridoru kısaltır.`);
-  return {rooms,warnings,D,W,pd,x0,x1,xc0,xc1,xw0,xw1,xe0,xe1,yL0,yL1,yE0,yE1,yS0,Ds,kk,clo,wcR,vest,laundry,depo,hasUp,Lc,yM0,yM1,xDrs,xEns,st,hall,living,bath,kitchen,master,dress,ens,corridor,hallX};
+  return {rooms,warnings,D,W,pd,x0,x1,xc0,xc1,xw0,xw1,xe0,xe1,yL0,yL1,yE0,yE1,yS0,Ds,kk,clo,wcR,vest,laundry,depo,hasUp,bathW,Lc,yM0,yM1,xDrs,xEns,st,hall,living,bath,kitchen,master,dress,ens,corridor,hallX};
 }
 
 /* ---------- Geometri → ilkeller (metre, y yukarı) ---------- */
@@ -253,7 +267,7 @@ function build(p){
     });
   }
 
-  const {x0,x1,xc0,xc1,xw0,xw1,xe0,xe1,yL0,yL1,yE0,yE1,yS0,Ds,kk,clo,wcR,vest,laundry,depo,hasUp,Lc,yM0,yM1,xDrs,xEns,st,hall,living,bath,kitchen,master,dress,ens,corridor,hallX}=L;
+  const {x0,x1,xc0,xc1,xw0,xw1,xe0,xe1,yL0,yL1,yE0,yE1,yS0,Ds,kk,clo,wcR,vest,laundry,depo,hasUp,bathW,Lc,yM0,yM1,xDrs,xEns,st,hall,living,bath,kitchen,master,dress,ens,corridor,hallX}=L;
   const ctr=(a,len,ww)=>a+(len-ww)/2;
   const open=p.kitchen==='open';
 
@@ -275,12 +289,12 @@ function build(p){
   const lwv=Math.min(2.4,living.h-1.4);
   east.op.push({at:ctr(yL0,living.h,lwv),w:lwv,kind:'window'});
   east.op.push({at:ctr(kitchen.y,kitchen.d,1.8),w:1.8,kind:'window'});                       // mutfak evye penceresi
-  east.op.push({at:ctr(bath.y,bath.d,0.6),w:0.6,kind:'window'});                             // banyo
-  if(!hasUp) westN.op.push({at:wAt(westN,ctr(wcR.y,wcR.h,0.5)),w:0.5,kind:'window'});        // WC (tek hücre durumunda dış duvarda)
+  if(!bathW) east.op.push({at:ctr(bath.y,bath.d,0.6),w:0.6,kind:'window'});                  // banyo
+  if(!hasUp) westN.op.push({at:wAt(westN,ctr(wcR.y,wcR.h,0.5)),w:0.5,kind:'window'});        // WC (batı dış duvarında ise)
   if(laundry) westN.op.push({at:wAt(westN,ctr(laundry.y,laundry.h,0.8)),w:0.8,kind:'window'});   // çamaşır
   const winFor=k=>k==='bed'||k==='study'?1.6:0;
-  st.W.rooms.filter(r=>!r.hidden).forEach(r=>{ const ww=Math.min(winFor(r.kind),r.d-0.8); if(ww>0) westN.op.push({at:wAt(westN,ctr(r.y,r.d,ww)),w:ww,kind:'window'}); });
-  st.E.rooms.filter(r=>r.kind!=='kitchen'&&r.kind!=='bath').forEach(r=>{ const ww=Math.min(winFor(r.kind),r.d-0.8); if(ww>0) east.op.push({at:ctr(r.y,r.d,ww),w:ww,kind:'window'}); });
+  st.W.rooms.forEach(r=>{ if(r.kind==='suite2') westN.op.push({at:wAt(westN,ctr(r.ens.y,r.ens.h,0.6)),w:0.6,kind:'window'}); else if(!r.hidden){ const ww=Math.min(winFor(r.kind),r.d-0.8); if(ww>0) westN.op.push({at:wAt(westN,ctr(r.y,r.d,ww)),w:ww,kind:'window'}); } });
+  st.E.rooms.forEach(r=>{ if(r.kind==='suite2') east.op.push({at:ctr(r.ens.y,r.ens.h,0.6),w:0.6,kind:'window'}); else if(r.kind!=='kitchen'&&r.kind!=='bath'){ const ww=Math.min(winFor(r.kind),r.d-0.8); if(ww>0) east.op.push({at:ctr(r.y,r.d,ww),w:ww,kind:'window'}); } });
   const bedC=(xc0+(c-0.9)/2)-0.2-0.55-0.9;                                                   // ebeveyn yatak ekseni
   const mw=Math.min(2.4,2*(bedC-master.x-0.4),2*(master.x+master.w-bedC-0.4)); north.op.push({at:bedC-mw/2,w:mw,kind:'window'});   // pencere yatağı ortalar
   if(ens) east.op.push({at:ctr(ens.y,ens.h,0.6),w:0.6,kind:'window'});                       // lavabo üstü
@@ -293,10 +307,14 @@ function build(p){
   // servis hücresi: KK'nın batı duvarı (WC, çamaşır); doğuda vestiyer nişi duvarsız, üstünde depo duvarlı
   wall('A-WALL-INT','v',kk.x-ti,yS0,Ds,ti,hasUp
     ? [{at:0.35,w:0.8,kind:'door',swing:-1,hinge:'b'},{at:(laundry.y-yS0)+0.3,w:0.8,kind:'door',swing:-1,hinge:'a'}]   // depo, çamaşır kapıları
-    : [{at:0.35,w:0.7,kind:'door',swing:-1,hinge:'b'}]);                                                              // tek hücre: WC kapısı
+    : [{at:0.35,w:0.7,kind:'door',swing:-1,hinge:'b'},...(laundry?[{at:(laundry.y-yS0)+0.3,w:0.8,kind:'door',swing:-1,hinge:'a'}]:[])]);   // WC (+çamaşır) kapıları
   if(hasUp){
     wall('A-WALL-INT','v',kk.x+kk.w,wcR.y-ti,Ds-wcD,ti,[{at:ti+0.3,w:0.7,kind:'door',swing:+1,hinge:'a'}]);   // WC kapısı (KK'dan, girişten görünmez)
     wall('A-WALL-INT','h',xw0,yS0+wcD,cellW,ti); wall('A-WALL-INT','h',vest.x,yS0+wcD,vest.w,ti);
+  }
+  if(bathW){
+    wall('A-WALL-INT','h',xw0,yS0+wcD,cellW,ti);                                                              // WC | çamaşır
+    wall('A-WALL-INT','h',kk.x,bath.y-ti,kk.w,ti,[{at:kk.w-0.15-0.8,w:0.8,kind:'door',swing:+1,hinge:'b'}]);   // lobi → banyo, kapı doğu uçta
   }
   // mutfak | hol: duvar, kapısı salona yakın (güney) uçta; kapalı mutfakta salona servis penceresi
   wall('A-WALL-INT','v',xc1,yE0,p.De,ti,[{at:0.15,w:0.9,kind:'door',swing:+1,hinge:'a'}]);
@@ -309,12 +327,16 @@ function build(p){
   // koridor duvarları
   const corE=wall('A-WALL-INT','v',xc1,yE1,yM0-ti-yE1,ti);
   const corW=wall('A-WALL-INT','v',xw1,yS0,yM0-ti-yS0,ti);
-  corE.op.push({at:(bath.y-corE.y)+bath.d-0.15-0.8,w:0.8,kind:'door',swing:+1,hinge:'b'});     // banyo kapısı koridordan
+  if(!bathW) corE.op.push({at:(bath.y-corE.y)+bath.d-0.15-0.8,w:0.8,kind:'door',swing:+1,hinge:'b'});   // banyo kapısı koridordan
   // ebeveyn güney duvarı: kapı koridor hizasında, menteşe doğuda
   wall('A-WALL-INT','h',x0,yM0-ti,x1-x0,ti,[{at:(xc0+(c-0.9)/2)-x0,w:0.9,kind:'door',swing:+1,hinge:'b'}]);
   [[st.W,corW,-1],[st.E,corE,+1]].forEach(([s,cw,sw])=>{
     s.rooms.forEach((r,i)=>{
-      if(i<s.rooms.length-1 && r.kind!=='kitchen') wall('A-WALL-INT','h',r.x,r.y+r.d,r.w,ti);
+      const nxt=s.rooms[i+1];
+      if(nxt&&nxt.kind==='suite2'){ const e=nxt.ens, g=nxt.clo;                                          // oda → banyo 2 ve giyinme kapıları
+        wall('A-WALL-INT','h',r.x,r.y+r.d,r.w,ti,[{at:(e.side==='E'?e.x+0.15:e.x+e.w-0.95)-r.x,w:0.8,kind:'door',swing:+1,hinge:e.side==='E'?'a':'b'},{at:g.x+ctr(0,g.w,0.8)-r.x,w:0.8,kind:'door',swing:+1,hinge:'a'}]);
+        wall('A-WALL-INT','v',e.side==='E'?e.x-ti:e.x+e.w,e.y,e.h,ti); }
+      else if(i<s.rooms.length-1 && r.kind!=='kitchen') wall('A-WALL-INT','h',r.x,r.y+r.d,r.w,ti);
       if(r.kind==='bed'||r.kind==='study') cw.op.push(s===st.E                                    // doğu odaları aynalı: kapı güney uçta, karşılıklı kapı olmaz
         ? {at:(r.y-cw.y)+0.5,w:0.9,kind:'door',swing:sw,hinge:'a'}
         : {at:(r.y-cw.y)+r.d-0.5-0.9,w:0.9,kind:'door',swing:sw,hinge:'b'});
@@ -333,7 +355,7 @@ function build(p){
     if(p.fills) rect('A-AREA',r.x,r.y,r.w,r.h,false,{fillColor:ZONE_FILL[r.zone]});
     if(!r.name) return;
     const cxm=r.x+r.w/2, cym=r.y+r.h/2;
-    if(r.id==='COR'||r.id==='ENS'){ text('A-ANNO',cxm,cym,0.2,`${r.name} ${r.area} m²`,'middle',90); return; }
+    if(r.id==='COR'||r.id==='ENS'||(r.id==='EN2'&&r.h>r.w*1.3)){ text('A-ANNO',cxm,cym,0.2,`${r.name} ${r.area} m²`,'middle',90); return; }
     const small=r.w<2.0||r.h<2.0;
     if(r.kind==='store'||r.kind==='store2'||r.kind==='closet'){ text('A-ANNO',cxm,cym-0.06,0.16,r.kind==='closet'?r.name:`${r.name} ${r.area} m²`); return; }
     text('A-ANNO',cxm,cym+(small?0.05:0.18),small?0.2:0.26,r.name);
@@ -375,24 +397,33 @@ function build(p){
       if(r.kind==='bed'){ const f=frame(r,r.side==='W'?'E':'W',r.side==='E'); bedroom(f,f.lh-0.5-0.9); }
       else if(r.kind==='study'){ const f=frame(r,r.side==='W'?'E':'W',r.side==='E'); f.box(0.05,f.lh/2-0.7,0.7,1.4); f.box(0.85,f.lh/2-0.25,0.5,0.5); f.box(0.9,0,f.lw-1.5,0.35); f.box(0.05,f.lh-0.4,f.lw-0.1,0.4); }
       else if(r.kind==='store'){ const f=frame(r,r.side==='W'?'E':'W'); f.box(0,0.05,0.5,f.lh-0.1); }
+      else if(r.kind==='suite2'){ const e=r.ens, g=r.clo; const ext=e.side==='E'; const wx=ext?e.x+e.w:e.x;      // wx: dış (pencereli) duvar
+        shower(e.x,e.y+e.h-1.0,e.w,1.0,'S');                                                                  // duş kısa duvar boyunca tam en
+        const by=e.y+0.3; basinW(ext?wx-0.6:wx,by,'y'); mat(ext?wx-1.2:wx+0.7,by+0.15,0.5,0.7);
+        toilet(wx,(by+1.0+e.y+e.h-1.0)/2,ext?-1:1,0);                                                         // klozet lavabo ile duş arasına ortalı
+        const cx=ext?g.x:g.x+g.w-0.6; rect(F,cx,g.y+0.05,0.6,g.h-0.7,false); line(F,cx,g.y+0.05,cx+0.6,g.y+g.h-0.65);   // giyinme: koridor duvarında gardırop
+        rect(F,g.x+0.05,g.y+g.h-0.6,g.w-0.1,0.55,false); line(F,g.x+0.05,g.y+g.h-0.6,g.x+g.w-0.05,g.y+g.h-0.05); }
     });
     // banyo: kapı batı (koridor) duvarının kuzey ucunda; girince sağ (güney) duvar boyunca lavabo → klozet → dipte (doğu) duş
     // banyo: lavabo kapı yanında, duş dipte kısa duvar boyunca tam en, klozet lavabo ile duş arasına ortalı
-    { const b=bath; basinW(b.x+0.15,b.y,'x'); mat(b.x+0.25,b.y+0.7,0.8,0.5);
+    if(!bathW){ const b=bath; basinW(b.x+0.15,b.y,'x'); mat(b.x+0.25,b.y+0.7,0.8,0.5);
       const sw=Math.min(1.0,b.w-2.2); shower(b.x+b.w-sw,b.y,sw,b.h,'W');
       toilet((b.x+1.15+b.x+b.w-sw)/2,b.y,0,1); }
+    else { const b=bath; shower(b.x,b.y,1.0,b.h,'E'); basinW(b.x+b.w-0.6,b.y+0.1,'y'); mat(b.x+b.w-1.2,b.y+0.25,0.5,0.7);   // 2+1 banyosu: kapı güneydoğu, duş batı kısa duvarda, lavabo koridor duvarında
+      toilet((b.x+1.0+b.x+b.w-0.6)/2,b.y+b.h,0,-1);
+      rect(F,kk.x+kk.w-0.6,kk.y+0.05,0.6,kk.h-0.1,false); line(F,kk.x+kk.w-0.6,kk.y+0.05,kk.x+kk.w,kk.y+kk.h-0.05); }   // lobi: koridor duvarında vestiyer gardırobu
     // WC: kuzeydoğu hücre, kapı batıda (KK); klozet kuzey duvarında, lavabo koridor duvarı boyunca. Tek hücre durumunda güneybatıda, lavabo pencere altında
     if(hasUp){ const r=wcR; toilet(r.x+0.4,r.y+r.h,0,-1); basinW(r.x+r.w-0.6,r.y+0.1,'y'); }
     else { const r=wcR; toilet(r.x+r.w-0.45,r.y+r.h,0,-1); basinW(r.x,r.y+0.1,'y'); }
     // vestiyer nişi: koridor duvarı boyunca gardırop, altında bank
-    rect(F,vest.x+vest.w-0.6,vest.y+0.05,0.6,vest.h-0.1,false); line(F,vest.x+vest.w-0.6,vest.y+0.05,vest.x+vest.w,vest.y+vest.h-0.05);
-    rect(F,vest.x+0.05,vest.y+vest.h-0.4,vest.w-0.7,0.35,false);
+    if(vest){ rect(F,vest.x+vest.w-0.6,vest.y+0.05,0.6,vest.h-0.1,false); line(F,vest.x+vest.w-0.6,vest.y+0.05,vest.x+vest.w,vest.y+vest.h-0.05);
+      rect(F,vest.x+0.05,vest.y+vest.h-0.4,vest.w-0.7,0.35,false); }
     if(laundry){ const l=laundry; const ly=l.y+l.h-0.65;
       rect(F,l.x+0.05,ly,0.6,0.6,false); circle(F,l.x+0.35,ly+0.3,0.22);
       if(l.w>=1.25){ rect(F,l.x+0.65,ly,0.6,0.6,false); circle(F,l.x+0.95,ly+0.3,0.22); }
       if(l.w>=1.8) rect(F,l.x+l.w-0.45,l.y+0.1,0.4,l.h-0.9,false); }
     if(depo) rect(F,depo.x+0.05,depo.y+0.05,0.5,depo.h-0.1,false);                              // depo rafı batı duvarında
-    rect(F,clo.x,clo.y,clo.w,clo.h,false); line(F,clo.x,clo.y,clo.x+clo.w,clo.y+clo.h);        // koridor sonu dolap
+    if(clo){ rect(F,clo.x,clo.y,clo.w,clo.h,false); line(F,clo.x,clo.y,clo.x+clo.w,clo.y+clo.h); }   // koridor sonu dolap
     rect(F,hall.x+0.05,hall.y+0.15,0.35,0.9,false);                                            // ayakkabılık
     // mutfak: L dizi — batı (hol) duvarı kapının kuzeyinden + kuzey duvarı; buzdolabı kuzeydoğu köşede; evye + bulaşık kuzey dizide
     // ada salona paralel, 1.15 m çalışma koridoru, kuzey yüzü 0.6 çalışma (ocak), güney yüzü 0.4 bar taşması + tabureler (salon tarafı)
@@ -462,7 +493,7 @@ function build(p){
     const yn=D+0.7; const chainN=ens?[[master.x,master.x+master.w],[dress.x,dress.x+dress.w],[ens.x,ens.x+ens.w]]:[[master.x,x1]];
     chainN.forEach(([a,b])=>{ dimH(a,b,yn); ext(a,D+0.1,yn+0.15); ext(b,D+0.1,yn+0.15); });
     const xd=-0.7, xt=-1.3;
-    const chainW=[[yL0,yL1],[yE0,yE1],[yS0,yS0+Ds],...st.W.rooms.filter(r=>!r.hidden).map(r=>[r.y,r.y+r.d]),[yM0,yM1]];
+    const chainW=[[yL0,yL1],[yE0,yE1],[yS0,yS0+Ds],...st.W.rooms.filter(r=>r.kind!=='service').map(r=>[r.y,r.y+r.d]),[yM0,yM1]];
     chainW.forEach(([a,b])=>{ dimV(a,b,xd,false); extH(a,-0.1,xd-0.15); extH(b,-0.1,xd-0.15); });
     dimV(0,D,xt,false); extH(0,-0.1,xt-0.15); extH(D,-0.1,xt-0.15);
     const xe=W+0.7; const chainE=[[yL0,yL1],...st.E.rooms.map(r=>[r.y,r.y+r.d]),[yM0,yM1]];
