@@ -76,20 +76,12 @@ main{padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
 
 <aside>
   <h2>Program</h2>
-  <div class="field"><label>Yatak odası sayısı<small>Ebeveyn dahil</small></label><input type="number" id="beds" min="1" max="4" value="3"></div>
-  <div class="field"><label>Ebeveyn en-suite + giyinme<small>Giyinmeden banyoya geçiş</small></label><input type="checkbox" id="ens" checked></div>
+  <div class="field"><label>Yatak odası sayısı<small>Ebeveyn dahil, en fazla 4</small></label><input type="number" id="beds" min="1" max="4" step="1" value="3"></div>
   <div class="field"><label>Mutfak</label><div class="seg" id="kitchen"><button data-v="closed">Kapalı</button><button data-v="open" class="on">Açık + ada</button></div></div>
   <div class="field"><label>Giriş<small>Uzun cephede, banyo yanında</small></label><div class="seg" id="side"><button data-v="left" class="on">Sol</button><button data-v="right">Sağ</button></div></div>
-  <div class="field"><label>Giriş nişi<small>1.5 m sundurma, servis hücresi hizasında</small></label><input type="checkbox" id="porch" checked></div>
 
-  <h2>Kabuk (m)</h2>
-  <div class="field"><label>Bina genişliği<small>Dar kenar, dış yüz</small></label><input type="number" id="W" min="8" max="13" step="0.1" value="10.0"></div>
-  <div class="field"><label>Salon derinliği<small>Güney uç, tam genişlik</small></label><input type="number" id="Dl" min="4.5" max="8" step="0.1" value="6.0"></div>
-  <div class="field"><label>Giriş holü derinliği</label><input type="number" id="De" min="1.8" max="3.2" step="0.1" value="2.2"></div>
-  <div class="field"><label>Mutfak derinliği</label><input type="number" id="Dk" min="3.0" max="5.0" step="0.1" value="3.6"></div>
-  <div class="field"><label>Yatak odası derinliği<small>Koridor boyunca</small></label><input type="number" id="Db" min="3.0" max="4.5" step="0.1" value="3.6"></div>
-  <div class="field"><label>Ebeveyn derinliği<small>En-suite 2.4 + giyinme</small></label><input type="number" id="Dm" min="3.8" max="5.5" step="0.1" value="4.2"></div>
-  <div class="field"><label>Koridor genişliği</label><input type="number" id="c" min="1.1" max="2.0" step="0.05" value="1.3"></div>
+  <h2>Yapı (m)</h2>
+  <div class="field"><label>Bina genişliği<small>Dar kenar, dış yüz. Mekân derinlikleri otomatik.</small></label><input type="number" id="W" min="8" max="13" step="0.1" value="10.0"></div>
   <div class="field"><label>Dış duvar kalınlığı</label><input type="number" id="te" min="0.15" max="0.5" step="0.05" value="0.25"></div>
   <div class="field"><label>İç duvar kalınlığı</label><input type="number" id="ti" min="0.08" max="0.25" step="0.01" value="0.10"></div>
 
@@ -129,7 +121,7 @@ const LAYER = Object.fromEntries(LAYERS.map(l=>[l.id,l]));
 const ZONE_FILL = {day:'#f6ecd8', night:'#dfe8f4', wet:'#d9efe9', circ:'#efefe8'};
 
 /* ---------- Durum ---------- */
-const S = {beds:3, ens:true, kitchen:'open', side:'left', porch:true,
+const S = {beds:3, ens:true, kitchen:'open', side:'left', porch:true,   // en-suite + giyinme ve giriş nişi her planda var
   W:10.0, De:2.2, Dk:3.6, Dl:6.0, Db:3.6, Dm:4.2, c:1.3, te:0.25, ti:0.10,
   furn:true, fills:true, dims:true, pname:'Konut A', hidden:new Set()};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -461,7 +453,7 @@ function build(p){
       if(l.w>=1.8) rect(F,l.x+l.w-0.45,l.y+0.1,0.4,l.h-0.9,false); }
     if(depo) rect(F,depo.x+0.05,depo.y+0.05,0.5,depo.h-0.1,false);                              // depo rafı batı duvarında
     if(clo){ rect(F,clo.x,clo.y,clo.w,clo.h,false); line(F,clo.x,clo.y,clo.x+clo.w,clo.y+clo.h); }   // koridor sonu dolap
-    rect(F,hall.x+0.05,hall.y+0.15,0.35,0.9,false);                                            // ayakkabılık
+    rect(F,hall.x+0.05,yE1-0.35,0.9,0.35,false);                                               // ayakkabılık: kuzey duvara dayalı, kapı açılımının dışında
     // mutfak: L dizi — batı (hol) duvarı kapının kuzeyinden + kuzey duvarı; buzdolabı kuzeydoğu köşede; evye + bulaşık kuzey dizide
     // ada salona paralel, 1.15 m çalışma koridoru, kuzey yüzü 0.6 çalışma (ocak), güney yüzü 0.4 bar taşması + tabureler (salon tarafı)
     { const k=kitchen; const t=0.6; const kx1=k.x+k.w, ky1=k.y+k.d; const wy0=k.y+1.15;
@@ -649,10 +641,9 @@ function toPDF(model){
 /* ---------- UI ---------- */
 const $=id=>document.getElementById(id);
 function readState(){
-  S.beds=clamp(+$('beds').value||1,1,4); S.ens=$('ens').checked; S.porch=$('porch').checked;
-  S.W=clamp(+$('W').value||10,8,13); S.Dl=clamp(+$('Dl').value||6,4.5,8); S.De=clamp(+$('De').value||2.2,1.8,3.2);
-  S.Dk=clamp(+$('Dk').value||3.6,3,5); S.Db=clamp(+$('Db').value||3.6,3,4.5); S.Dm=clamp(+$('Dm').value||4.2,3.8,5.5);
-  S.c=clamp(+$('c').value||1.3,1.1,2); S.te=clamp(+$('te').value||0.25,0.15,0.5); S.ti=clamp(+$('ti').value||0.1,0.08,0.25);
+  S.beds=clamp(Math.round(+$('beds').value||1),1,4); if(+$('beds').value!==S.beds) $('beds').value=S.beds;   // 1-4 ile sınırlı
+  S.W=clamp(+$('W').value||10,8,13);
+  S.te=clamp(+$('te').value||0.25,0.15,0.5); S.ti=clamp(+$('ti').value||0.1,0.08,0.25);
   S.furn=$('furn').checked; S.fills=$('fills').checked; S.dims=$('dims').checked; S.pname=$('pname').value||'Konut';
 }
 let MODEL=null;
